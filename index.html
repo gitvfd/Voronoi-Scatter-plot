@@ -88,12 +88,6 @@
   </style>
 </head>
 <body>
-  <div id="tooltip" class="hidden">
-      <p><strong><span id="countryTooltip">All</span>:</strong> </p>
-      <p>Change in GDP: <span id="changeGDP">XX</span></p>
-      <p>Change in CO<sub>2</sub>: <span id="changeCO2">XX</span></p>
-      <p><i><span id="defZone">Definition</span></i></p>
-  </div>
     <header>
         <center>
         <h1>
@@ -327,7 +321,7 @@ function showTooltip (d, i) {
                           else
                              def= "Relative decoupling: CO₂ emissions do not increase as fast as the economy grows";
 
-      return "<div style='font-size: 11px; text-align: center;'><span>" + d.Country + "</span><br><span>Change in GDP: <span >" + d3.format(".1%")(parseFloat(d.changeGDP)) + "</span ></span><br><span>Change in CO<sub>2</sub>: <span>" + d3.format(".1%")(parseFloat(d.changeCO2)) + "</span></span><br><span>" + def + "</span></div>"; }
+      return "<div style='font-size: 11px; text-align: center;'><span style='font-weight:bold'>" + d.Country + "</span><br><span>Change in GDP: <span >" + d3.format(".1%")(parseFloat(d.changeGDP)) + "</span ></span><br><span>Change in CO<sub>2</sub>: <span>" + d3.format(".1%")(parseFloat(d.changeCO2)) + "</span></span><br><span style='font-style:italic'>" + def + "</span></div>"; }
   });
   $(element).popover('show');
 
