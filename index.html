@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Production based CO2 emissions vs GDP with Voronoï grid</title>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+      <!-- jQuery -->
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <!-- Latest compiled and minified CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+  
+  <!-- Open Sans & CSS -->
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans:700,400,300' rel='stylesheet' type='text/css'>
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <style>
+
+    body { color: #555; background: #fff;width: 500px; font: normal 13px "HelveticaNeueLT", Helvetica, Arial, sans-serif; margin: 2em; }
+    header { margin: 0 0 20px 20px; border-bottom: 1px solid #6c6c6c; width: 400px; position: relative; }
+    h1 { font-size: 14px; font-weight: bold; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
+    h2 { font-size: 12px; font-weight: normal; font-style: italic; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
+    small { margin: 0 0 10px 130px; color: #555; font-size: 13px; font-style: italic; top: 0.6em; position: top;}
+    a { color: #fff; }
+
+    .row {
+
+      width: 400px;
+      margin-left: -20px;
+      *zoom: 1;
+    }
+    .row:before, .row:after {
+      display: table;
+      content: "";
+    }
+    .row:after {
+      clear: both;
+    }
+    #tooltip {
+      position: absolute;
+      width: auto;
+      height: auto;
+      padding: 10px;
+      background-color: white;
+      -webkit-border-radius: 2px;
+      -moz-border-radius: 2px;
+      border-radius: 2px;
+      -webkit-box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+      -moz-box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+      box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+      opacity: 0.90;
+      filter:alpha(opacity=90);
+      -moz-opacity:0.90;
+    }
+
+    #tooltip.hidden {
+      display: none;
+    }
+
+    #tooltip p {
+      margin: 0;
+      font-family: sans-serif;
+      font-size: 12px;
+      line-height: 13px;
+    }
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: black;
+      shape-rendering: crispEdges;
+    }
+    
+    .axis text {
+      font-family: sans-serif;
+      font-size: 11px;
+      fill: grey;
+    }
+    .popover {
+      pointer-events: none;
+    }
+    
+    .source {
+      font-family: sans-serif;
+      font-size: 11px;
+      fill: grey;
+    }
+  </style>
+</head>
+<body>
+  <div id="tooltip" class="hidden">
+      <p><strong><span id="countryTooltip">All</span>:</strong> </p>
+      <p>Change in GDP: <span id="changeGDP">XX</span></p>
+      <p>Change in CO<sub>2</sub>: <span id="changeCO2">XX</span></p>
+      <p><i><span id="defZone">Definition</span></i></p>
+  </div>
+    <header>
+        <center>
+        <h1>
+          Decoupling CO<sub>2</sub> emissions from economic growth
+        </h1>
+         <h2>
+          in 1999-2011
+        </h2>
+        </center>
+    </header>
+  </div>
+  <br>
+  <div class="row">
+    <div class="span1" id="chart"></div>
+  </div>
+  <!--<div><b>* </b>: <b>Vertical axis</b>: Production-based CO₂ emission from fuel combustion. <br> &nbsp; &nbsp;<b>Horizontal axis</b>: Change in GDP. From January 1999 to November 2009.</div>-->
+  <div class="source"><b>Source: </b>IEA (2013), <i>IEA CO2 Emissions from Fuel Combustion</i> (database);<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; OECD (2013), <i>OECD Economic 
+Outlook No. 93</i> (database)</div>
+  <script>
+    var margin = 50,
+        width = 550,
+        height = 500;
+
+    var opacityCircles = 0.7; 
+    
+    chart = d3.select("#chart").append("svg")
+               .attr("width", width)
+               .attr("height", height);
+
+
+    d3.tsv("data.tsv", function(tsv) {
+      data = tsv;
+      //Create scale functions
+      var xScale = d3.scale.linear()
+                 .domain([0, d3.max(data, function(d) { return parseFloat(d.changeGDP); })])
+                 .range([margin, width - margin * 2]);
+
+      var yScale = d3.scale.linear()
+                 .domain([d3.min(data, function(d) { return parseFloat(d.changeCO2); }), d3.max(data, function(d) { return parseFloat(d.changeCO2); })])
+                 .range([height - margin, margin]);
+      //Define X axis
+      var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .orient("bottom")
+                .ticks(5)
+                .tickFormat(d3.format("0%"));
+
+      //Define Y axis
+      var yAxis = d3.svg.axis()
+                .scale(yScale)
+                .orient("left")
+                .ticks(5)
+                .tickFormat(d3.format("0%"));
+
+      
+      //Create X axis
+      chart.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(xAxis);
+      
+      //Create Y axis
+      chart.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(" + margin + ",0)")
+        .call(yAxis);
+
+      chart.append("text")
+        .attr("x",xScale(d3.max(data, function(d) { return parseFloat(d.changeGDP)}))-100)
+        .attr("y",yScale(0)+30)
+        .text("Economic growth (change in GDP)");
+
+      chart.append("text")
+        .attr("x",xScale(0)-35)
+        .attr("y",yScale(d3.max(data, function(d) { return parseFloat(d.changeCO2)}))-10)
+        .text("Change in CO₂ emissions from fuel combustion");
+
+      
+
+      //Create circles
+      chart.selectAll("circle")
+         .data(data)
+         .enter()
+         .append("circle")
+         .attr("class", function(d,i) { return "countries " + d.ISO; }) // define a class per circle to attach the voronoi grid to it
+         .attr("cx", function(d) {
+            return xScale(parseFloat(d.changeGDP));
+         })
+         .attr("cy", function(d) {
+            return yScale(parseFloat(d.changeCO2));
+         })
+         .attr("r", function(d) {
+            return 4;
+         })
+         .attr("fill",function(d){
+          if (d.Country=="Sweden")
+            return "#fb1600";
+          else if (d.Country=="OECD")
+            return "rgb(74,117,187)";
+          else if(d.changeCO2>0)
+            return "rgb(126,126,126)";
+          else if (d.changeCO2<=0)
+            return "rgb(102,189,58)";
+         });
+
+
+      //Create labels
+
+      chart.selectAll("text")
+         .data(data)
+         .enter()
+         .append("text")
+         .text(function(d) {
+            if(!(d.ISO=="NOR") && !(d.ISO=="FIN") && !(d.ISO=="CHE")&& !(d.ISO=="ESP")&& !(d.ISO=="FRA")&& !(d.ISO=="GRC")&& !(d.ISO=="CAN")&& !(d.ISO=="BEL")&& !(d.ISO=="DEU")&& !(d.ISO=="NZL")&& !(d.ISO=="OECD")&& !(d.ISO=="JPN")){
+              return d.ISO;
+            }
+
+         })
+         .attr("x", function(d) {
+            if(d.changeCO2>=0)
+            return xScale(parseFloat(d.changeGDP)) + 8;
+            else
+            return xScale(parseFloat(d.changeGDP)) +8;
+         })
+         .attr("y", function(d) {
+            if(d.changeCO2>=0)
+            return yScale(parseFloat(d.changeCO2))+ 0;
+          else
+            return yScale(parseFloat(d.changeCO2))+ 5;
+         })
+         .attr("font-family", "sans-serif")
+         .attr("font-size", "10px");
+ 
+
+      
+      //Create X axis
+      chart.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(0," + yScale(0) + ")")
+        .call(xAxis);
+      
+      //Create Y axis
+      chart.append("g")
+        .attr("class", "axis")
+        .attr("transform", "translate(" + margin + ",0)")
+        .call(yAxis);
+
+      chart.append("text")
+        .attr("x",xScale(d3.max(data, function(d) { return parseFloat(d.changeGDP)}))-100)
+        .attr("y",yScale(0)+30)
+        .text("Economic growth (change in GDP)");
+
+      chart.append("text")
+        .attr("x",xScale(0)-35)
+        .attr("y",yScale(d3.max(data, function(d) { return parseFloat(d.changeCO2)}))-10)
+        .text("Change in CO₂ emissions from fuel combustion");
+
+
+      //Initiate the voronoi function
+      //Use the same variables of the data in the .x and .y as used in the cx and cy of the circle call
+      //The clip extent will make the boundaries end nicely along the chart area instead of splitting up the entire SVG
+      //(if you do not do this it would mean that you already see a tooltip when your mouse is still in the axis area, which is confusing)
+      var voronoi = d3.geom.voronoi()
+              .x(function(d) { return xScale(d.changeGDP); })
+              .y(function(d) { return yScale(d.changeCO2); })
+              .clipExtent([[0, 0], [width, height]]);
+
+
+      //Initiate a group element to place the voronoi diagram in
+      var voronoiGroup = chart.append("g")
+        .attr("class", "voronoiWrapper");
+  
+      //Create the Voronoi grid
+      voronoiGroup.selectAll("path")
+              .data(voronoi(data)) //Use vononoi() with your dataset inside
+              .enter().append("path")
+              .attr("d", function(d, i) { return "M" + d.join("L") + "Z"; })
+              .datum(function(d, i) { return d.point; })
+              //Give each cell a unique class where the unique part corresponds to the circle classes
+              .attr("class", function(d,i) { return "voronoi " + d.ISO; })
+              //.style("stroke", "#2074A0") //If you want to look at the cells
+              .style("fill", "none")
+              .style("pointer-events", "all")
+              .on("mouseover", showTooltip)
+              .on("mouseout",  removeTooltip);
+
+///////////////////////////////////////////////////////////////////////////
+/////////////////// Hover functions of the circles ////////////////////////
+///////////////////////////////////////////////////////////////////////////
+
+//Hide the tooltip when the mouse moves away
+function removeTooltip (d, i) {
+
+  //Save the chosen circle (so not the voronoi)
+  var element = d3.selectAll("countries "+d.ISO);
+    
+  //Fade out the bubble again
+  element.style("opacity", 0.7);
+  
+  //Hide tooltip
+  $('.popover').each(function() {
+    $(this).remove();
+  }); 
+  
+  //Fade out guide lines, then remove them
+  d3.selectAll(".guide")
+    .transition().duration(200)
+    .style("opacity",  0)
+    .remove();
+    
+}//function removeTooltip
+
+//Show the tooltip on the hovered over slice
+function showTooltip (d, i) {
+  
+  //Save the chosen circle (so not the voronoi)
+  var element = d3.selectAll(".countries."+d.ISO);
+  
+  //Define and show the tooltip
+  $(element).popover({
+    placement: 'auto top',
+    container: '#chart',
+    trigger: 'manual',
+    html : true,
+    content: function() { 
+      var def;
+      if(d.changeCO2>d.changeGDP)
+                             def="No decoupling: In this area, as the economy grows, so do CO₂ emissions";
+                          else if (d.changeCO2<=0)
+                             def= "Decoupling: the economy grows while managing to reduce emissions";
+                          else
+                             def= "Relative decoupling: CO₂ emissions do not increase as fast as the economy grows";
+
+      return "<div style='font-size: 11px; text-align: center;'><span>" + d.Country + "</span><br><span>Change in GDP: <span >" + d3.format(".1%")(parseFloat(d.changeGDP)) + "</span ></span><br><span>Change in CO<sub>2</sub>: <span>" + d3.format(".1%")(parseFloat(d.changeCO2)) + "</span></span><br><span>" + def + "</span></div>"; }
+  });
+  $(element).popover('show');
+
+  //Make chosen circle more visible
+  element.style("opacity", 1);
+  
+  //Append lines to bubbles that will be used to show the precise data points
+  //vertical line
+  chart.append("g")
+    .attr("class", "guide")
+    .append("line")
+      .attr("x1", element.attr("cx"))
+      .attr("x2", element.attr("cx"))
+      .attr("y1", +element.attr("cy"))
+      .attr("y2", (height))
+      .style("stroke", element.style("fill"))
+      .style("opacity",  0)
+      .style("pointer-events", "none")
+      .transition().duration(200)
+      .style("opacity", 0.5);
+  //horizontal line
+  chart.append("g")
+    .attr("class", "guide")
+    .append("line")
+      .attr("x1", +element.attr("cx"))
+      .attr("x2", 0)
+      .attr("y1", element.attr("cy"))
+      .attr("y2", element.attr("cy"))
+      .style("stroke", element.style("fill"))
+      .style("opacity",  0)
+      .style("pointer-events", "none")
+      .transition().duration(200)
+      .style("opacity", 0.5);
+          
+}
+    });
+
+  </script>
+</body>
